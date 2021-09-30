@@ -1,0 +1,114 @@
+---
+title: "Class 1 - 7.10.2021"
+author: "Alessandro Bramucci"
+output:
+  html_document:
+    toc: true
+    theme: united
+---
+
+# 1) R language essentials
+
+```{r}
+# R can be used as a calculator
+2 + 2
+exp(0)
+log(1)
+
+# Assigning a value to the object x
+x <- 15
+
+# To remove the object
+rm(x)
+
+# R handle data vectors as single objects. We can easily create data vectors
+x <- c(1, 2, 3)
+
+# We can check the names of the objects stored in the environment
+ls()
+
+# To remove all objects from the environment
+rm(list = ls())
+
+# R can easily create sequences of numbers
+a <- 1:10 
+b <- seq(from = 1, to = 10, by = 1)
+
+# Generating random numbers from a normal distribution specifying mean and standard deviation; to obtain the same results we must set the same seed
+set.seed(1234)
+
+rnorm(n = 10, mean = 0, sd = 1)
+
+# Assigning (a vector of) random numbers to an object called y
+y <- rnorm(10, 0, 1)
+
+# Length of the vector y
+length(y)
+
+# Logical operations. The operator "==" force R to make a "true or false" judgment
+2 + 2 == 4
+sqrt(25) == 4
+
+# Other classical operators
+100 >= 100
+99 > 100
+99 != 100
+!(1==1) # One is not equal to one -> FALSE!
+(1==1) | (2==3) # One is equal to one OR two is equal to three -> TRUE!
+(1==1) & (2==3) # One is equal to one AND two is equal to three -> FALSE!
+```
+
+# 2) Matrix operations
+
+R can perform standard matrix algebra operations. We can use matrix algebra functions in R to solve our problem from class.
+
+$$
+7x + 5y - 3z = 16 \\
+3x -5y +2z	= -8 \\
+5x +3y -7z = 0
+$$
+
+First, we rewrite the system using matrix and vector notation:
+
+$$
+\mathbf{A} = \left[\begin{array}
+{rrr}
+7 & 5 & -3 \\
+3 & -5 & 2 \\
+5 & 3 & -7 \\
+\end{array}\right]
+\mathbf{b} = \left[\begin{array}
+{rrr}
+x \\
+y \\
+z \\
+\end{array}\right]
+\mathbf{r} = \left[\begin{array}
+{rrr}
+16 \\
+-8 \\
+0 \\
+\end{array}\right]
+$$
+
+In order to obtain the result vector *b*, we have to rearrange the model performing some simple matrix algebra operations.
+
+$$
+\mathbf{A}^{-1}\mathbf{A}\mathbf{b} = \mathbf{A}^{-1}\mathbf{r} \\
+\text{remember that} \space \mathbf{A}^{-1}\mathbf{A} = \mathbf{I} \\
+\mathbf{b} = \mathbf{A}^{-1}\mathbf{r}
+$$ 
+
+We are now ready to solve our system of equations using R:
+
+```{r}
+data <- c(7, 5, -3, 3, -5, 2, 5, 3, -7)
+
+A <- matrix(data, nrow = 3, ncol = 3, byrow = TRUE)
+
+r <- c(16, -8, 0)
+
+b <- solve(A) %*% r
+
+b
+```
