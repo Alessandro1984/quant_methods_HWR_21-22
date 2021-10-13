@@ -1,7 +1,7 @@
 # Clear the workspace
 rm(list = ls())
 
-######### Part I #########
+######### Part II #########
 
 # 1) Find mean and median
 x <- c(3,5,2,6,5,9,5,2,8,5)
@@ -20,7 +20,7 @@ wt <- c(1,1,3)
 
 weighted.mean(z, wt)
 
-########## Part II ##########
+########## Part III ##########
 
 # A percentile is a point in a distribution at which or below which a given proportion of data is found. 
 # The k-th percentile divides the data in a way that k-percent of the data lie below the percentile
@@ -67,7 +67,7 @@ P_new
 # 3) Boxplot
 boxplot(a, horizontal = TRUE)
 
-######### Part III #########
+######### Part IV #########
 
 # 1) Find variance and standard deviation
 b <- c(2, 5, 3, 4, 6)
@@ -88,7 +88,7 @@ b_times_10 <- b * 10
 var(b_times_10)
 sd(b_times_10)
 
-######## Part IV ########
+######## Part V ########
 
 # 1) Find covariance and Pearson's correlation coefficient between the variables X and Y 
 
