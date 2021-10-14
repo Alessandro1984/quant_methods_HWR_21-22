@@ -1,4 +1,4 @@
-# quant_methods_HWR_21-22
+# Quantitative Methods for Economists - HWR Berlin, Winter term 2021-2022 
 
 This repository contains the code material for the course *Quantitative Methods for Economists* at the Berlin School of Economics and Law (HWR) - winter semester 2021-2022. The course covers the following topics:
 
