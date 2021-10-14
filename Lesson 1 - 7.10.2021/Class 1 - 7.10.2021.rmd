@@ -2,8 +2,10 @@
 title: "Class 1 - 7.10.2021"
 author: "Alessandro Bramucci"
 output:
+  pdf_document:
+    toc: yes
   html_document:
-    toc: true
+    toc: yes
     theme: united
 ---
 
