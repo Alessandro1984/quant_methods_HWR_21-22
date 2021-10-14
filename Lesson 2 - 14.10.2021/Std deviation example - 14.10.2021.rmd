@@ -1,0 +1,56 @@
+---
+title: "Standard deviation - example"
+author: "Alessandro Bramucci"
+date: "14.10.2021"
+output: html_document
+---
+
+In this exercise, we simulate data for two variables drawing numbers from two normal distributions with same mean but different standard deviation. Goal of this simple exercise is to offer a visual understanding of the concept of standard deviation. We can think of these numbers as stock returns, for example.
+
+Before we start, we must set the same "seed" using the *set.seed()* function if we want to obtain the same values from the simulations.
+
+```{r}
+set.seed(1234)
+```
+
+We draw numbers from two normal distributions with mean zero and standard deviation 10 and 5.
+
+```{r}
+stock_1 <- rnorm(100, mean = 0, sd = 10)
+stock_2 <- rnorm(100, mean = 0, sd = 5)
+```
+
+We are now ready to plot the data.
+
+```{r}
+
+# Plot
+plot(x = 1:100,
+     y = stock_1,
+     type = "l",
+     col = "red",
+     xlab = "Time",
+     ylab = "Returns")
+lines(x = 1:100,
+      y = stock_2,
+      type = "l",
+      col = "blue")
+legend(x = "topleft",
+       legend = c("Stock 1", "Stock 2"),
+       col = c("red", "blue"),
+       bg = "transparent",
+       bty = "n",
+       lty = c(1,1),
+       cex = 0.8)
+
+```
+
+To conclude, we can notice that the standard deviation of the variables *Stock 1* and *Stock 2* will be close, but not identical, to the standard deviation of the normal distribution from which data are drawn.
+
+```{r}
+sd(stock_1)
+sd(stock_2)
+```
+
+
+
