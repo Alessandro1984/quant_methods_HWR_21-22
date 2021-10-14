@@ -11,7 +11,7 @@ output:
 
 ```{r}
 # R can be used as a calculator
-2 + 3
+2 + 2
 exp(0)
 log(1)
 
@@ -46,7 +46,7 @@ y <- rnorm(10, 0, 1)
 length(y)
 
 # Logical operations. The operator "==" force R to make a "true or false" judgment
-2 + 2 == 4
+2 + 3 == 5
 sqrt(25) == 4
 
 # Other classical operators
