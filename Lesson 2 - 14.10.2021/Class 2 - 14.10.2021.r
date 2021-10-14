@@ -76,6 +76,16 @@ var(b)
 sd(b)
 sd(b) == sqrt(var(b))
 
+# 1bis) Create a function for standard deviation
+
+my_std_dev <- function(x) {
+std_dev <- sqrt(1/(length(x)-1) * sum((x-mean(x))^2))
+return(std_dev)
+}
+
+my_std_dev(x=b)
+
+
 # 2) Add 10 to data
 b_plus_10 <- b + 10
 
