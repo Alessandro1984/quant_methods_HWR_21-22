@@ -9,12 +9,12 @@ roll_function <- function(nr_of_die) {
                  replace = TRUE,
                  prob = rep(1/6, 6))
   
-  sum_roll <- sum(roll) # The function sum is necessary for simulations with two dice
+  sum_roll <- sum(roll) # The function sum is necessary for simulations with two or more dice
   
   return(sum_roll)
 }
 
-throws <- replicate(10000, roll_function(nr_of_die = 2))
+throws <- replicate(10000, roll_function(nr_of_die = 1))
 
 # Plot
 qplot(throws,
