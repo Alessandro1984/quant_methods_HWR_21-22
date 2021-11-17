@@ -30,4 +30,3 @@ reg3 <- lm(y ~ x2)
 
 # Regressions table
 stargazer(reg1, reg2, reg3, type = "text", keep.stat = c("n", "rsq", "ser"))
-
