@@ -1,0 +1,101 @@
+---
+title: "Estimation of Okun's coefficient for Germany, 1991-2018"
+author: "Alessandro Bramucci"
+date: "18.11.2021"
+output:
+  html_document:
+    toc: true
+    theme: united
+---
+
+# 1) Creating the variables for the regression
+
+```{r, collapse = TRUE, message = FALSE, warning = FALSE}
+# Load the data 
+Okun <- read.csv("Okun.csv", 
+                 skip = 1, 
+                 sep = ";")
+
+# Creating the first difference of the unemployment rate
+Okun$dUnem <- c(NA, diff(Okun$Unem))
+
+# Creating the first difference of real GDP
+Okun$dGDP <- c(NA, diff(Okun$GDP))
+
+# Creating lagged real GDP
+library(dplyr)
+
+Okun$lGDP <- lag(Okun$GDP, shift = 1)
+
+# We now calculate the rate of growth of real GDP
+Okun$GDP_gr <- Okun$dGDP/Okun$lGDP * 100
+
+# Remove the first row
+Okun <- Okun[-1,]
+
+# Let's take a look at the data
+head(Okun, 10L)
+
+```
+
+# 2) The linear regression
+
+```{r, collapse = TRUE}
+# Linear regression model. We regress unemployment on real GDP
+reg1 <- lm(dUnem ~ GDP_gr, data = Okun)
+
+# Scatter plot of the regression
+plot(Okun$GDP_gr, Okun$dUnem,
+     main = "Okun's Law with crisis in 2009",
+     xlab = "Percent",
+     ylab = "Percentage point")
+abline(reg1, col = "blue", lty = 2, lwd = 2)
+abline(h = 0, lty = 3)
+abline(v = 0, lty = 3)
+
+# We remove 2009 (the year of the crisis) from the data
+Okun2 <- subset(Okun, !(Okun$Year == 2009))
+
+# We regress the change in unemployment rate on real GDP growth without the year of the crisis
+reg2 <- lm(dUnem ~ GDP_gr, data = Okun2)
+
+# We now want a scatter of our our new data (without the crisis)
+plot(Okun2$GDP_gr, Okun2$dUnem,
+     main = "Okun's Law without crisis in 2009",
+     xlab = "Percent",
+     ylab = "Percentage point")
+abline(reg2, col = "blue", lty = 2, lwd = 2)
+abline(h = 0, lty = 3)
+abline(v = 0, lty = 3)
+
+# We can save the value of the estimated parameters for future computations
+beta_0_2 <- unname(coef(reg2)["(Intercept)"])
+beta_1_2 <- unname(coef(reg2)["GDP_gr"])
+```
+
+# 3) Regression tables
+
+```{r, message = FALSE, collapse = TRUE}
+library(stargazer)
+
+# We now want to run a last model with a dummy that captures onyl the year of the crisis 2009
+Okun$dummy_2009 <- 0
+
+Okun$dummy_2009[Okun$Year == 2009] <- 1
+
+reg3 <- lm(dUnem ~ GDP_gr + dummy_2009, data = Okun)
+```
+
+```{r}
+stargazer(reg1, reg2, reg3, type = "text", keep.stat = c("n", "rsq"))
+```
+
+How much does real GDP has to grow per year in order to keep the change in the unemployment rate constant at 0%? First, we report the equation that we have just estimated.^[We will only use results from column (2). We have saved these values at the end of the previous section.]
+
+$$dUnem = 0.624 - 0.421*GDP_{gr}$$
+Since we want the change in unemployment from one year to the next to be equal to 0, we have to put 0 on the right-hand side of the estimated equation.
+
+$$0 = 0.624 - 0.421*GDP_{gr}$$
+
+Rearranging the terms, we get that GDP has to grow on average by `r round(beta_0_2/-beta_1_2, digits = 3)` to keep unemployment constant.
+
