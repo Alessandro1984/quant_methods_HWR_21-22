@@ -1,0 +1,171 @@
+---
+title: "Linear growth model"
+author: "Alessandro Bramucci"
+date: "25.11.2021"
+output:
+  html_document:
+    toc: true
+    theme: united
+---
+
+This exercise is taken from the book [Econometrics by Example](https://www.macmillanihe.com/page/detail/Econometrics-by-Example/?K=9781137375018) by Gujarati, D.
+
+# Data description
+
+- Time Series: Real Gross Domestic Product of USA (seasonally not adjusted)
+- Observations: from 1960 to 2007
+- Units: Billions of dollars
+- Data: https://fred.stlouisfed.org/series/GDPCA
+
+# Level-level model
+
+```{r, collapse = TRUE, message = FALSE, warning = FALSE}
+library(stargazer)
+
+# Loading the data
+RGDP <- read.csv("GDPCA.csv", sep= ";", header = TRUE)
+
+# Inspecting the data
+head(RGDP, 5L)
+
+# The model
+linear_trend <- lm(RGDP$GDPCA ~ RGDP$TIME)
+
+# Plot
+plot(RGDP$TIME, RGDP$GDPCA,
+     type = "l",
+     col = "blue",
+     main = "The linear trend model",
+     xlab = "Time",
+     ylab = "Real GDP",
+     ylim = c(0, max(RGDP$GDPCA)),
+     xaxs = "i", 
+     yaxs = "i")
+abline(lm(RGDP$GDPCA ~ RGDP$TIME))
+
+```
+
+```{r, collapse = TRUE, message = FALSE, warning = FALSE}
+stargazer(linear_trend, type = "text", keep.stat = c("n", "rsq"))
+```
+
+The slope coefficient gives us absolute change in real GDP per unit of time (year). These results show that over the period 1960–2007, real GDP in the USA increased on average by about $243 billion per year.
+
+# Log-level model
+
+We can also estimate the rate of growth of real GDP using logs. We know that:
+
+$$RGDP_t  = RGDP_{1960}*(1 + r)^t$$
+
+Using logs we can rewrite the function above as:
+
+$$ln(RGDP_t)  = ln(RGDP_{1960}) + ln(1 + r)*t$$
+
+Now letting $\beta_0 = ln(RGDP_{1960})$ and $\beta_1 = ln(1 + r)$ we can rewrite the model as:
+
+$$ln(RGDP_t)  = \beta_0 + \beta_1*t + u_t$$
+
+```{r, collapse = TRUE, message = FALSE, warning = FALSE}
+
+RGDP$lnGDPCA <- log(RGDP$GDPCA)
+
+log_linear_trend <- lm(RGDP$lnGDPCA ~ RGDP$TIME)
+
+plot(RGDP$TIME, RGDP$lnGDPCA,
+     type = "l",
+     col = "red",
+     main = "The log-linear trend model",
+     xlab = "Time",
+     ylab = "Log real GDP",
+     xaxs = "i", 
+     yaxs = "i")
+abline(lm(RGDP$lnGDPCA ~ RGDP$TIME))
+
+```
+
+```{r, collapse = TRUE, message = FALSE, warning = FALSE}
+stargazer(log_linear_trend, type = "text", keep.stat = c("n", "rsq"))
+```
+
+Results show that real GDP in the USA has been increasing at a rate of 3.22% per year. If we exponentiate the slope coefficient ($e^{\beta_0}$) we obtain approximately the value of real GDP at the starting period (1960).
+
+```{r}
+exp(8.0881267)
+head(RGDP, 1L)
+```
+
+The coefficient $\beta_2$ gives us the instantaneous rate of growth. We can also calculate the compound rate of growth $r$.
+
+```{r}
+(exp(0.0322421) - 1)*100
+```
+
+# Quadratic regression model (level-level)
+
+We can now consider the following polynomial (i.e. quadratic) model:
+
+$$ RGDP_t  = \beta_0 + \beta_1*t + \beta_2*t^2 + u_t $$
+
+The fact that $t$ and $t^2$ are correlated does not raise the problem of collinearity. One of the assumption of the multiple linear regression model is that there is no perfect linear relationship between the regressors. This is because the two variables are not a linear function of each other but rather a quadratic function.
+
+```{r, collapse = TRUE, message = FALSE, warning = FALSE}
+
+quadratic_trend <- lm(RGDP$GDPCA ~ RGDP$TIME + I(RGDP$TIME^2))
+
+plot(RGDP$TIME, RGDP$GDPCA,
+     type = "l",
+     col = "black",
+     main = "The quadratic level-level trend model",
+     xlab = "Time",
+     ylab = "Real GDP",
+     xaxs = "i", 
+     yaxs = "i")
+lines(RGDP$TIME, quadratic_trend$fitted.values, col = "green")
+
+```
+
+```{r, collapse = TRUE, message = FALSE, warning = FALSE}
+stargazer(quadratic_trend, type = "text", keep.stat = c("n", "rsq"))
+```
+
+How can we interpret these results? In the multiple linear regression context, we interpret the partial effect of one regressor by differentiating the function with respect to that variable. In a linear model in levels, what we usually obtain is the coefficient (one of the betas) that multiply that variable. By doing so we are treating the other variables as constants. In this example, we have to differentiate with respect to $t$ and we cannot treat $t^2$ as a constant.
+
+$$ \frac{dRGDP}{dt} = \beta_1 + 2 * \beta_2 * t $$
+
+$$ \frac{dRGDP}{dt} = 72.9873 + 2 * 3.4676 * t $$
+
+We have obtained the rate of change in real GDP with respect to time. The rate of change in real GDP with respect to time is a positive function of time. As time increases, real GDP is increasing at an increasing rate. We can also notice that the rate of change in real GDP depends on time at which the rate of change is measured as opposed to the linear level-level model from above.
+
+# Quadratic regression model (log-level)
+
+We can now consider the same model as before, but with the log of real GDP:
+
+$$ ln(RGDP_t)  = \beta_0 + \beta_1*t + \beta_2*t^2 + u_t $$
+
+```{r, collapse = TRUE, message = FALSE, warning = FALSE}
+
+quadratic_log_trend <- lm(RGDP$lnGDPCA ~ RGDP$TIME + I(RGDP$TIME^2))
+
+plot(RGDP$TIME, RGDP$lnGDPCA,
+     type = "l",
+     col = "black",
+     main = "The quadratic log-level trend model",
+     xlab = "Time",
+     ylab = "Log real GDP",
+     xaxs = "i", 
+     yaxs = "i")
+lines(RGDP$TIME, quadratic_log_trend$fitted.values, col = "purple")
+
+```
+
+```{r, collapse = TRUE, message = FALSE, warning = FALSE}
+stargazer(quadratic_log_trend, type = "text", keep.stat = c("n", "rsq"))
+```
+
+What is the interpretation of what we have just obtained?
+
+$$ \frac{d ln(RGDP)}{dt} = \beta_1 + 2 * \beta_2 * t$$
+
+$$ \frac{d ln(RGDP)}{dt} = 0.036 - 2 * 0.00007736 * t$$
+
+On the left hand side of the derivative, we have the rate of growth in real GDP. From the estimated coefficients we see that real GDP is increasing at a decreasing rate.
