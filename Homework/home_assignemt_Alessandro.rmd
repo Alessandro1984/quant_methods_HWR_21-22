@@ -1,0 +1,101 @@
+---
+title: "Home assignment"
+author: "Alessandro Bramucci"
+output:
+  html_document:
+    toc: true
+    theme: united
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(tidyr)
+library(stargazer)
+
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE,
+	collapse = TRUE
+)
+```
+
+# 1) Data description and data manipulation
+
+The raw data downloaded from the FRED database cover the gross domestic product and unemployment rate of the United States from 1950 to 2008. Data for GDP are annual while data for the unemployment rate are monthly. We will therefore have to transform the latter into an annual value. First let's load the raw data into R using the *read.csv* function.^[This function is not the only one for importing csv into R. It is not even the most up-to-date but it's good enough for now.]
+
+```{r}
+GDPCA <- read.csv("GDPCA.csv",
+                  header = TRUE,
+                  sep = ",")
+
+UNRATE <- read.csv("UNRATE.csv",
+                  header = TRUE,
+                  sep = ",")
+```
+
+We now need to create the variables for the regression. To do this we will use the functions of two widely used R packages, *tidyr* and *dplyr*. We begin by calculating the average annual unemployment rate. If you are new to the packages or you keep forgetting stuff like me, it is good to take a look at the [cheat sheet](https://www.rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf) of the packages.
+
+```{r}
+# We create annual averages of unemployment
+UNRATE_ready <- UNRATE %>% 
+  separate(DATE, c("Year", "Month", "Day")) %>% 
+  group_by(Year) %>% 
+  summarise(UNRATE_avg = mean(UNRATE))
+
+# We remove month and day from DATE
+GDPCA_ready <- GDPCA %>% 
+  separate(DATE, c("Year", "Month", "Day")) %>% 
+  select(GDPCA, Year)
+```
+
+We are now ready to join the two data sets; we will use the variable Year as key. All that remains to do is to calculate the variables for the regression.
+
+```{r}
+# Join the two data sets
+Okun <- inner_join(GDPCA_ready, UNRATE_ready, by = "Year")
+
+# First difference of the unemployment rate
+Okun <- Okun %>% 
+  mutate(dUNRATE_avg = c(NA, diff(UNRATE_avg)))
+
+# Real GDP growth rate
+Okun <- Okun %>%  
+  mutate(GDPCA_gr = c(NA, diff(GDPCA)) / lag(GDPCA, shift = 1) * 100)
+
+# Remove the first row because of NAs
+Okun <- Okun[-1,]
+
+# Let's take a look at the data
+head(Okun, 2L)
+tail(Okun, 2L)
+```
+
+# 2) Data visualization
+
+In this section, we are going to visualize our data with a scatter plot. In the horizontal axis we report the change in unemployment while in the vertical axis we report the growth rate in real GDP. We also introduce the regression line. In the next section, we will report the estimates of intercept and slope.
+
+```{r}
+plot(Okun$dUNRATE_avg, Okun$GDPCA_gr,
+     main = "Okun's law, US 1951-2008",
+     xlab = "Percentage point",
+     ylab = "Percent")
+abline(lm(Okun$GDPCA_gr ~ Okun$dUNRATE_avg), col = "blue", lty = 2, lwd = 2)
+abline(h = 0, lty = 3)
+abline(v = 0, lty = 3)
+```
+
+# 3) Regression
+
+We have reached almost the end of our exercise. As you can see from the table, the estimates obtained are similar (though not identical) to those reported in the book.
+
+```{r, fig.align = "center"}
+# We regress real GDP growth on the change in unemployment rate
+reg <- lm(GDPCA_gr ~ dUNRATE_avg, data = Okun)
+
+# Regression table
+stargazer(reg, type = "text", keep.stat = c("n", "rsq"))
+
+```
+
+From the table, we observe that Okun's coefficient for the US from 1951 to 2008 is equal `r round(unname(coef(reg)[2]), digits = 3)` (2 in the book). What does this mean? It means that if unemployment decreases by **one percentage point**, GDP increases on average by **`r round(unname(coef(reg)[2]), digits = 3) * -1` percent**. The intercept of the regression is `r round(unname(coef(reg)[1]), digits = 3)`. How can we interpret this coefficient? If unemployment remains constant, GDP will grow by `r round(unname(coef(reg)[1]), digits = 3)` percent on average.
