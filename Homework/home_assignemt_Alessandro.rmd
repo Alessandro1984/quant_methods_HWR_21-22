@@ -2,8 +2,10 @@
 title: "Home assignment"
 author: "Alessandro Bramucci"
 output:
+  pdf_document:
+    toc: yes
   html_document:
-    toc: true
+    toc: yes
     theme: united
 ---
 
@@ -78,8 +80,8 @@ In this section, we are going to visualize our data with a scatter plot. In the 
 ```{r}
 plot(Okun$dUNRATE_avg, Okun$GDPCA_gr,
      main = "Okun's law, US 1951-2008",
-     xlab = "Percentage point",
-     ylab = "Percent")
+     xlab = "Change in unemployment rate (percentage point)",
+     ylab = "Real GDP growth (percent)")
 abline(lm(Okun$GDPCA_gr ~ Okun$dUNRATE_avg), col = "blue", lty = 2, lwd = 2)
 abline(h = 0, lty = 3)
 abline(v = 0, lty = 3)
@@ -99,3 +101,5 @@ stargazer(reg, type = "text", keep.stat = c("n", "rsq"))
 ```
 
 From the table, we observe that Okun's coefficient for the US from 1951 to 2008 is equal `r round(unname(coef(reg)[2]), digits = 3)` (2 in the book). What does this mean? It means that if unemployment decreases by **one percentage point**, GDP increases on average by **`r round(unname(coef(reg)[2]), digits = 3) * -1` percent**. The intercept of the regression is `r round(unname(coef(reg)[1]), digits = 3)`. How can we interpret this coefficient? If unemployment remains constant, GDP will grow by `r round(unname(coef(reg)[1]), digits = 3)` percent on average.
+
+$$ \beta_1 = `r round(unname(coef(reg)[2]), digits = 3)`$$
