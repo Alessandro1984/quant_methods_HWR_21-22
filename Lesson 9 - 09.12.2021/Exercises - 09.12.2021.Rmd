@@ -1,0 +1,211 @@
+---
+title: "Bivariate linear regression - Exercises"
+author: "Alessandro Bramucci"
+output:
+  html_document:
+    theme: united
+    toc: yes
+---
+
+```{r, message = FALSE, include = FALSE}
+library(wooldridge)
+library(stargazer)
+```
+
+The exercises presented in this document are taken from the book *Introductory Econometrics. A Modern Approach*, by Jeffrey M. Wooldridge.
+
+# Exercise C1
+
+i) Find the average participation rate and the average match rate in the sample
+
+The average participation rate is approx. `r round(mean(k401k$prate), digits = 2)` percent. The average match rate is approx. `r round(mean(k401k$mrate), digits = 2)` percent. This means that on average for every dollar of contribution by the workers, employers contribute with 73 dollar cents.
+
+ii) Now, estimate the simple regression equation and report the results along with the sample size and R-square.
+
+$$ \widehat{prate} = \hat{\beta_0}  + \hat{\beta_1} mrate $$ 
+
+```{r, include = FALSE}
+reg1 <- lm(k401k$prate ~ k401k$mrate)
+```
+
+```{r, echo = FALSE}
+stargazer(reg1, type = "text", keep.stat = c("n", "rsq"))
+```
+
+iii) Interpret the intercept in your equation. Interpret the coefficient on mrate.
+
+The intercept $\hat{\beta_0}$ tells us the value of y, the participation rate to the pension plan in our model, when x (the match rate of the employer), is equal to to zero. It is not always possible to interpret the intercept and one must be careful with that. If the match rate is zero, then the predicted participation rate is expected to be 83 percent (the variable prate is expressed in percent).
+
+The value of the slope coefficient $\hat{\beta_1}$ tells us that if mrate increases by 1 dollar (don't forget that the variable mrate is expressed in dollars!), on average the participation rate (prate) will increase by 5.86 percent. However, if the participation rate it is already very high, let's say 97 percent, it cannot increase by additional 5 percent as we will see with the next question.
+
+```{r, echo = FALSE}
+plot(k401k$mrate, k401k$prate, xlab = "Match Rate", ylab = "Participation Rate", main = "Exercise C1")
+abline(reg1, col = "red")
+```
+
+iv) Find the predicted prate when mrate = 3.5. Is this a reasonable prediction? Explain what is happening.
+
+$$ \widehat{prate} = \hat{\beta_0}  + \hat{\beta_1} * 3.5  = 103.59$$
+
+If the match rate of the company is equal to 3.5 dollars, the participation rate should increase to 103.6 percent, which is clearly impossible. There cannot be more than 100 percent participation rate. The highest fitted value is actually `r round(max(reg1$fitted.values), digits = 2)`. This means that the least squares regression doesn't work too well when the dependent variables has bounded values. Non linear models (e.g. logit or probit models) might be appropriate.
+
+```{r}
+as.numeric(reg1$coefficients[1] + reg1$coefficients[2]*3.5)
+```
+
+v) How much of the variation in prate is explained by mrate? Is this a lot in your opinion?
+
+We have to look at the so called R-squared (R2 in the table above). The R-squared tells us how well the estimated model is explaining the variation of the dependent variable. In the estimation, the R-squared is really low, it is equal to 0.0747 (we can give a percentage interpretation, 7.4 percent). This is very little, meaning that there must be other factors influencing the participation rate of employees to the pension plans.
+
+# Exercise C2
+
+You are given the following model where the variable salary is annual compensation in thousands of dollars and ceoten is prior number of years as CEO of the company.
+
+$$ log(salary) = \beta_0 + \beta_1ceoten + u $$
+
+i) Find the average salary and the average tenure in the sample.
+
+```{r, collapse = TRUE}
+mean(ceosal2$salary)
+mean(ceosal2$ceoten)
+```
+
+The average salary is approx. 866'000 dollars. The average number of years as CEO in the sample is 8.
+
+ii) How many CEOS are in their first year as CEO? What is the longest tenure as CEO?
+
+```{r, collapse = TRUE}
+sum(ceosal2$ceoten==0)
+
+max(ceosal2$ceoten)
+```
+
+There are 5 CEOs with no tenure and the longest tenure is 37 years.
+
+iii) Estimate the simple regression model.
+
+```{r, include = FALSE}
+reg2 <- lm(log(ceosal2$salary) ~ ceosal2$ceoten)
+```
+
+```{r, echo = FALSE}
+stargazer(reg2, type = "text", keep.stat = c("n", "rsq"))
+```
+
+```{r, echo = FALSE}
+plot(ceosal2$ceoten, log(ceosal2$salary), xlab = "CEO Tenure", ylab = "Log of CEO Salary", main = "Exercise C2")
+abline(reg2, col = "red")
+```
+
+The predicted percentage increase in salary given one more year as CEO (LOG-LEVEL model) is 0.9724, meaning that if tenure increases by one year, on average CEO salary will increase almost by 1 percent. To understand the interpretation of regression coefficients in different functional forms, please consult the textbook.
+
+```{r}
+0.009724*100
+```
+
+# Exercise C3
+
+In this exercise, we study the trade-off between time spent sleeping per week and time spent in paid work. We estimate the model suggested in the exercise (although it could be also reversed).
+
+$$ sleep = \beta_0 + \beta_1 totwork + u $$
+
+```{r, include = FALSE}
+reg3 <- lm(sleep75$sleep ~ sleep75$totwrk)
+```
+
+i) Report your results in equation form along with the number of observations and R-squared.
+
+$$ \widehat{sleep} = 3586.37695 - 0.15075 * totwork $$
+
+```{r, echo = FALSE}
+plot(sleep75$totwrk, sleep75$sleep, xlab = "Work", ylab = "Sleep", main = "Exercise C3")
+abline(reg3, col = "red")
+```
+
+The intercept of this equation means that the estimated time spent sleeping for a person who doesn't work is 3'586.377 minutes per week, or approx. 60 hours.
+
+```{r, echo = FALSE}
+stargazer(reg3, type = "text", keep.stat = c("n", "rsq"))
+```
+
+ii) If totwork increases by 2 hours, by how much is sleep estimated to fall? Do you find this to be a large effect?
+
+By working two hours more, on average sleep will decrease by 18 minutes. This decrease is not very large, also considered that we have to divide this number by the number of working days!
+
+```{r}
+reg3$coefficients[2]*120 
+```
+
+# Exercise C4
+
+Estimate a simple regression model explaining monthly salary (wage) in terms of IQ score (IQ).
+
+i) Find average salary and average IQ of the sample. What is the sample standard deviation of IQ? (IQ scores are standardized so that the average in the population is 100 with standard deviation equal to 15).
+
+```{r, collapse = TRUE}
+mean(wage2$wage)
+mean(wage2$IQ)
+sd(wage2$IQ)
+```
+
+ii) Estimate a simple regression model where one point increase in IQ changes wage by a constant dollar amount (LEVEL-LEVEL model). Use this model to find the predicted increase in wage for an increase in IQ of 15 points. Does IQ explain most of the variation in wage?
+
+```{r, include = FALSE}
+reg4 <- lm(wage2$wage ~ wage2$IQ)
+```
+
+```{r}
+as.numeric(reg4$coefficients[2]*(15))
+```
+
+This is called a LEVEL-LEVEL model. A one-point increase in IQ increases wage on average by 8.3 dollars. If IQ increases by 15 points, wage will increase on average by approx. 125 dollars. IQ doesn't explain much of the variation in wage because the $R^2$ is really low, approx $9.6\%$.
+
+```{r, echo = FALSE}
+plot(wage2$IQ, wage2$wage, xlab = "IQ", ylab = "Wage", main = "Exercise C4")
+abline(reg4, col = "red")
+```
+
+iii) Now, estimate a model where one point increase in IQ has the same percentage effect on wage (LOG-LEVEL model). If IQ increase by 15 point, what is the approx. percentage increase in predicted wage?
+
+```{r, include = FALSE}
+reg5 <- lm(log(wage2$wage) ~ wage2$IQ)
+```
+
+```{r}
+as.numeric(reg5$coefficients[2]*(15)*100)
+```
+
+This is called a LOG-LEVEL model. A one-point increase in IQ increases wage on average by 0.0088072*100 percent (less than 1 percent). If IQ increases by 15 points, wage will increase on average by 13 percent.
+
+```{r, echo = FALSE}
+stargazer(reg4, reg5, type = "text", keep.stat = c("n", "rsq"))
+```
+
+# Exercise C5
+
+Let rd denote annual expenditure on R&D and sales annual sales, both in millions of dollars. 
+
+i) Write down a model, not an estimated equation, that implies a constant elasticity between rd and sales. Which parameter is the elasticity?
+
+$$log(rd)=\beta_0 + \beta_1log(sales) + u$$
+
+In this model, $\beta_1$ is the parameter that represents the eleasticity of rd with respect to sales.
+
+ii) Estimate the model and write down the estimated equation. What is the estimated elasticity? Explains in words its meaning.
+
+$$\widehat{log(rd)} = -4.105 + 1.076 \widehat{log(sales)}$$
+
+```{r, include = FALSE}
+reg6 <- lm(log(rdchem$rd) ~ log(rdchem$sales))
+```
+
+```{r, echo = FALSE}
+stargazer(reg6, type = "text", keep.stat = c("n", "rsq"))
+```
+
+If sales increase by one percent, rd will increase on average by 1.076 percent.
+
+```{r, echo = FALSE}
+plot(log(rdchem$sales), log(rdchem$rd), xlab = "Log of sales", ylab = "Log of R&D", main = "Exercise C5")
+abline(reg6, col = "red")
+```
