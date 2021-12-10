@@ -1,0 +1,96 @@
+---
+title: "Data manipulation - 04.11.2021 "
+author: "Alessandro Bramucci"
+output:
+  html_document:
+    toc: true
+    theme: united
+---
+
+```{r, include = FALSE}
+library(wooldridge)
+```
+
+# 1. Loading packages and data
+
+We are going to install the *wooldridge* package which contains all data sets used in the book *Introductory Econometrics* by Jeffrey M. Wooldridge. Additional information regarding data can be found in the following [document](https://cran.r-project.org/web/packages/wooldridge/wooldridge.pdf). 
+
+```{r, eval = FALSE}
+# Install the package
+install.packages("wooldridge")
+
+# Upload the package to the library
+library(wooldridge)
+
+# Unload the package (if needed)
+detach("package:wooldridge", unload = TRUE)
+
+# Open the data set using the View function
+View(wage1)
+
+# If your data are stored as CSV, import data set using the read_csv function from the readr package. Remember to use the forward slash / or double backslash \\ in R!
+# library(readr)
+# wage1 <- read_csv("my_data/wage1.csv")
+```
+
+# 2. Data manipulation using base R
+
+```{r, eval = FALSE}
+# Check the number of row and col in wage1
+dim(wage1)
+
+# Indexing when we need to address a particular element into a vector, for example the years of education in row 5 (i.e. the number of years of education of the worker saved in row 5)
+wage1$educ[5]
+
+# If we want data for more than one row
+wage1$educ[c(2,3,5)]
+
+# Data from row one to row five
+wage1$educ[1:5]
+
+# If we want to modify one particular observation 
+wage1$educ[5] <- NA
+
+# Negative indexing allow to show all data except those specified in parenthesis
+wage1$educ[-c(1:520)]
+
+# Converting dollars to euros and add the new column variable to the data set
+wage1$wage_EUR <- wage1$wage * 0.86
+
+# Negative indexing allow us to drop specified rows and columns
+# Drop the first row in the data set
+wage1[-1,]
+
+# Drop the last column in the data set
+wage1[,-25]
+```
+
+# 3. Conditional selection in base R
+
+```{r, eval = FALSE}
+# To use when we need to extract data or statistics that satisfy certain criteria
+
+# Workers that have more than 15 years of education
+wage1$educ[wage1$educ > 15]
+
+# Workers that have between 15 AND 18 year of education
+wage1$educ[wage1$educ >= 15 & wage1$educ <= 18]
+
+# Workers that have between 15 OR 18 year of education
+wage1$educ[wage1$educ >= 15 | wage1$educ <= 18]
+
+# The hourly wages of workers that have 15 or more years of education
+wage1$wage[wage1$educ >= 15]
+
+# Hourly wages of workers with 15 or more years of education AND 5 or more years of experience 
+wage1$wage[wage1$educ >= 15 & wage1$exper >= 5]
+
+# Average hourly wage of workers that have 15 or more years of education
+mean(wage1$wage[wage1$educ >= 15], na.rm = TRUE)
+
+# Median hourly wage of workers that have 15 or more years of education
+median(wage1$wage[wage1$educ >= 15], na.rm = TRUE)
+
+# Look at what happens when we type educ>=15. We can exploit the fact that TRUE=1 and FALSE=0 to calculate the percentage of workers that 15 or more years of education
+sum(wage1$educ >= 15, na.rm = TRUE) / length(wage1$educ >= 0) * 100
+```
