@@ -177,7 +177,7 @@ df_contr <- df %>%
 
 # The growth contributions graph
 
-We can now create the graph to display the contributions to growth in each year (bar graph). To this we superimpose the growth rate of real GDP (black line). As above, we must first prepare the data in a format suitable for the chart.^[We will note that the demand contributions do not exactly sum up to the growth rate. If we wanted this, we would have had to recalculate real GDP in level summing the downloaded data for consumption, government spending, investment, exports minus imports. In that case, the GDP growth rate would have been equal to the sum of the individual demand contributions. This was done in an earlier version of the exercise.]
+We can now create the graph to display the contributions to growth in each year (bar graph). In addition, we superimpose the growth rate of real GDP (black line). As above, we must first prepare the data in a format suitable for the chart.^[We will note that the demand contributions do not exactly sum up to the growth rate. This is because we are excluding changes in inventories (or stocks) from investments.]
 
 ```{r, collapse=TRUE, warning=FALSE}
 # Preparing data for the graph 
