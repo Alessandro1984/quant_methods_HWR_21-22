@@ -9,27 +9,45 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(rdbnomics)
+library(kableExtra)
 ```
 
 # Growth contributions
 
-In this exercise, we want to apply one of the methods used in the literature on demand and growth regimes. Specifically, we want to calculate growth contributions for the case of Germany from 2001 to 2019.
+In this exercise, we want to apply one of the methods used in the literature on demand and growth regimes. Specifically, we want to calculate growth contributions for the case of Germany from 2001 to 2019. How to calculate the contributions to growth of aggregate demand components? The contribution to GDP growth of government demand, for example, is nothing more than the growth rate of government demand weighted by the lagged ratio of government demand to GDP.^[The same is true for the other components of aggregate demand.]
 
-$$Y_t = C_t + G_t + I_t + NX_t$$
+$$\widehat{G}_{t, contr} = \frac{G_t - G_{t-1}}{G_{t-1}} * \frac{G_{t-1}}{Y_{t-1}}$$
 
-$$\Delta Y_t = \Delta C_t + \Delta G_t + \Delta I_t + \Delta NX_t$$
+Simplifying, we see that the formula above can be rewritten as 
 
-$$\frac{\Delta Y_t}{Y_{t-1}} = \frac{\Delta C_t}{Y_{t-1}} + \frac{\Delta G_t}{Y_{t-1}} + \frac{\Delta I_t}{Y_{t-1}} + \frac{\Delta NX_t}{Y_{t-1}} $$
+$$\widehat{G}_{t, contr} = \frac{\Delta G_t}{Y_{t-1}}$$
+
+where $\Delta G_t$ is nothing more than $G_t - G_{t-1}$. We can obtain the contributions to growth starting with the aggregate demand equation.
+
+$$Y_t = C_t + G_t + I_t + X_t - M_t$$
+
+We then take the first differences of both the right and left hand sides.
+
+$$\Delta Y_t = \Delta C_t + \Delta G_t + \Delta I_t + \Delta X_t - \Delta M_t$$
+
+Finally, we divide both sides by the lagged value of GDP. We obtain the following:
+
+$$\frac{\Delta Y_t}{Y_{t-1}} = \frac{\Delta C_t}{Y_{t-1}} + \frac{\Delta G_t}{Y_{t-1}} + \frac{\Delta I_t}{Y_{t-1}} + \frac{\Delta X_t}{Y_{t-1}} - \frac{\Delta M_t}{Y_{t-1}} $$
+
+We can see that the growth rate of aggregate demand (the left hand side of the equation) is given in any period $t$ by the sum of the contributions of the individual components of aggregate demand (the right hand side), namely private consumption, government demand, investments of private businesses, exports minus imports.
+
+$$\widehat{Y}_{t, growth} = \widehat{C}_{t, contr} + \widehat{G}_{t, contr} + \widehat{I}_{t, contr} + \widehat{X}_{t, contr} - \widehat{M}_{t, contr}$$
 
 # Pulling and filtering data
 
+In this section of the exercise, we see how to get data from the _DBnomics_ database directly into R.^[DBnomics is a large database of macroeconomic data gathered from a number of international statistical offices and institutions.] To do this, we will make use of the _rdbnomics_ package. After downloading the data, we should select only the variables we are interested in^[The data obtained from DBnomics contains a lot of information that we do not really need.], filter the years for which we are conducting the exercise, and create additional variables (if needed). To speed up operations, we can program a simple function that allows us to repeat the same operations for each of the demand components.
+
 ```{r, collapse = TRUE}
-# Function to pull and filter data from DBnomics ----
+# Function to pull and filter data from DBnomics 
 filter_function <- function(x, y = "var_level_name", z = "var_gr_name") {
   
     df_x <- rdb(ids = x) %>% 
-      select("Country",
-             "original_period",
+      select("original_period",
              "value") %>% 
       rename(Year = original_period) %>% 
       filter(Year >= 2000 & Year <= 2019) %>% 
@@ -42,65 +60,128 @@ filter_function <- function(x, y = "var_level_name", z = "var_gr_name") {
   
 }
 
-# Gross domestic product at 2015 reference levels ----
+# Gross domestic product at 2015 reference levels 
 df_realGDP <- filter_function(x = "AMECO/OVGD/DEU.1.1.0.0.OVGD",
-                              y = "realGDP_level",
-                              z = "realGDP_gr")
+                              y = "rGDP_level",
+                              z = "rGDP_gr")
 
-# Gross capital formation at 2015 prices: total economy ----
-df_capfor <- filter_function(x = "AMECO/OITT/DEU.1.1.0.0.OITT",
-                             y = "Investment_level",
-                             z = "Investment_gr")
-
-# Private final consumption expenditure at 2015 prices ----
+# Private final consumption expenditure at 2015 prices 
 df_privcons <- filter_function(x = "AMECO/OCPH/DEU.1.1.0.0.OCPH",
                                y = "Consumption_level",
                                z = "Consumption_gr")
 
-# Final consumption expenditure of general government at 2015 prices ----
+# Final consumption expenditure of general government at 2015 prices 
 df_govcons <- filter_function(x = "AMECO/OCTG/DEU.1.1.0.0.OCTG",
                               y = "Gvt_spending_level",
                               z = "Gvt_spending_gr")
 
-# Exports of goods and services at 2015 prices ----
+# Gross fixed capital formation at 2015 prices: total economy 
+df_capfor <- filter_function(x = "AMECO/OIGT/DEU.1.1.0.0.OIGT",
+                             y = "Investment_level",
+                             z = "Investment_gr")
+
+# Exports of goods and services at 2015 prices 
 df_exp <- filter_function(x = "AMECO/OXGS/DEU.1.1.0.0.OXGS",
                           y = "Export_level",
                           z = "Export_gr")
 
-# Imports of goods and services at 2015 prices ----
+# Imports of goods and services at 2015 prices 
 df_imp <- filter_function(x = "AMECO/OMGS/DEU.1.1.0.0.OMGS",
                           y = "Import_level",
                           z = "Import_gr")
-```
 
-# Calculation of growth contributions
-
-```{r, collapse=TRUE, warning=FALSE}
-# Putting data together and calculating the additional variables ----
+# We join the data in a single data set
 df <- df_realGDP %>%
   full_join(df_capfor, by = "Year") %>%
   full_join(df_privcons, by = "Year") %>%
   full_join(df_govcons, by = "Year") %>%
-  full_join(df_imp, by = "Year") %>% 
-  full_join(df_exp, by = "Year") %>% 
-  mutate(rGDPlevel_calc = Investment_level + 
-           Consumption_level + Gvt_spending_level + Export_level - Import_level,
-  rGDPcalculated_gr = c(NA, diff(rGDPlevel_calc))/lag(rGDPlevel_calc) * 100,
-  Inv_gr_contr = Investment_gr * lag(Investment_level) / lag(rGDPlevel_calc),
-  Cons_gr_contr = Consumption_gr * lag(Consumption_level) / lag(rGDPlevel_calc),
-  Gvt_spending_gr_contr = Gvt_spending_gr * lag(Gvt_spending_level) / lag(rGDPlevel_calc),
-  Export_gr_contr = Export_gr * lag(Export_level) / lag(rGDPlevel_calc),
-  Import_gr_contr = (-1) * Import_gr * lag(Import_level) / lag(rGDPlevel_calc),
+  full_join(df_imp, by = "Year") %>%
+  full_join(df_exp, by = "Year")
+
+```
+
+# Graph of growth rates
+
+Let's now look at the data for the rate of growth of GDP and of the demand components, consumption, government demand, investment, exports and imports. To create the graph we use the R package _ggplot2_. Before coding the graph, we need to prepare the data in the right format.
+
+```{r, collapse=TRUE, warning=FALSE}
+# Prepare the data
+df_graph <- df %>% 
+  select(Year,
+         rGDP_gr,
+         Consumption_gr,
+         Gvt_spending_gr,
+         Investment_gr,
+         Export_gr,
+         Import_gr) %>% 
+  pivot_longer(!Year, names_to = "Growth_rates", values_to = "value")
+
+# Plot 
+p <- ggplot(df_graph, aes(x = as.numeric(Year), y = value)) +
+  geom_line(aes(color = Growth_rates)) +
+  # This is the dotted line at y=0
+  geom_hline(yintercept = 0, 
+             linetype = "dashed", 
+             color = "black") +
+  # We redefine the labels in the legend of the graph
+  scale_colour_discrete(name = "Growth rates",
+                      breaks = c("rGDP_gr",
+                                 "Consumption_gr",
+                                 "Gvt_spending_gr",
+                                 "Investment_gr",
+                                 "Export_gr",
+                                 "Import_gr"),
+                      labels = c("Real GDP",
+                                 "Consumption",
+                                 "Government demand",
+                                 "Investment",
+                                 "Exports",
+                                 "Imports")) +
+  # We include title and axis labels
+  labs(title = "Real growth rates of GDP and demand components, 2001-2019", 
+       x = "Year", 
+       y = "Percent") +
+  scale_x_continuous(breaks = seq(2000, 2019, 1)) + 
+  # This option rotate the labels of the x-axis
+  theme(axis.text.x = element_text(angle = 45))
+
+p
+```
+
+# Calculation of growth contributions
+
+We are now ready to calculate the growth contributions. To do this we will use the formula we saw in the initial section, e.g. $\widehat{G}_{t, contr} = \Delta G_t / Y_{t-1}$.^[An earlier version of this exercise used the first formula presented in the initial section. The current version is quicker and clearer. Growth rates of aggregate demand components will not be needed anymore.]
+
+```{r, collapse=TRUE, warning=FALSE}
+  # We now calculate the contributions of the individual components of aggregate demand
+df_contr <- df %>% 
+  mutate(
+  # Consumption
+  Cons_gr_contr = c(NA, diff(Consumption_level)) / lag(rGDP_level) * 100,
+  # Government spending or public consumption
+  Gvt_spending_gr_contr = c(NA, diff(Gvt_spending_level)) / lag(rGDP_level) * 100,
+  # Investment
+  Inv_gr_contr = c(NA, diff(Investment_level)) / lag(rGDP_level) * 100,
+  # Export
+  Exp_gr_contr = c(NA, diff(Export_level)) / lag(rGDP_level) * 100,
+  # Import
+  Imp_gr_contr = (-1) * c(NA, diff(Import_level)) / lag(rGDP_level) * 100,
+  # We then calculate net export
   Net_export_level = Export_level - Import_level,
-  Net_export_gr_contr = Export_gr_contr + Import_gr_contr)
+  # And the growth contribution of net export
+  Net_export_gr_contr = c(NA, diff(Net_export_level))/lag(rGDP_level) * 100,
+  # Finally, we calculate the share of net export on real GDP
+  Net_export_GDP = Net_export_level / rGDP_level * 100)
+
 ```
 
 # The growth contributions graph
 
+We can now create the graph to display the contributions to growth in each year (bar graph). To this we superimpose the growth rate of real GDP (black line). As above, we must first prepare the data in a format suitable for the chart.^[We will note that the demand contributions do not exactly sum up to the growth rate. If we wanted this, we would have had to recalculate real GDP in level summing the downloaded data for consumption, government spending, investment, exports minus imports. In that case, the GDP growth rate would have been equal to the sum of the individual demand contributions. This was done in an earlier version of the exercise.]
+
 ```{r, collapse=TRUE, warning=FALSE}
-# Preparing data for the graph ----
-# Growth contribution
-df_graph <- df %>% 
+# Preparing data for the graph 
+df_graph1 <- df_contr %>% 
   select(Year,
          Cons_gr_contr,
          Gvt_spending_gr_contr,
@@ -110,39 +191,57 @@ df_graph <- df %>%
 
 # Real GDP growth
 df_graph2 <- df %>% 
-  select(Year, rGDPcalculated_gr) %>% 
+  select(Year, rGDP_gr) %>% 
   pivot_longer(!Year, names_to = "Contributions", values_to = "value")
 
-# Plot ----
+# Plot 
 p <- ggplot() +
-  geom_bar(data = df_graph, aes(x = Year, 
+  # There are the bars for growth contributions
+  geom_bar(data = df_graph1, aes(x = Year, 
                                 y = value, 
                                 fill = Contributions),
            stat = "identity") +
+  # This is the line for real GDP growth 
   geom_line(data = df_graph2, aes(x = Year, 
                                   y = value,
                                   group = 1)) +
+  # This is the dotted line at y=0
   geom_hline(yintercept = 0, 
              linetype = "dashed", 
              color = "black") +
+  # We redefine the labels in the legend of the graph
+  scale_fill_discrete(name = "Growth contributions",
+                      breaks = c("Cons_gr_contr", 
+                                 "Gvt_spending_gr_contr", 
+                                 "Inv_gr_contr",
+                                 "Net_export_gr_contr"),
+                      labels = c("Consumption", 
+                                 "Government demand", 
+                                 "Investment",
+                                 "Net exports")) +
+  # We include title and axis labels
   labs(title = "GDP growth contribution", 
        x = "Year", 
-       y = "Percent")
+       y = "Percent") +
+  # This option rotate the labels of the x-axis
+  theme(axis.text.x = element_text(angle = 45))
 
 p
-
 ```
 
 # Exercise
 
-Calculate the following values for Germany (for the periods 2001–2009 and 2010–2019) and compare them with the values in Table 1 of Hein and Martschin (2021).^[Hein E. and Martschin, J. (2021), Demand and growth regimes in finance-dominated capitalism and the role of the macroeconomic policy regime: a post-Keynesian comparative study on France, Germany, Italy and Spain before and after the Great Financial Crisis and the Great Recession, 2, pp. 493–527. The paper can be found     
+Calculate the following values for Germany for the periods 2001–2009 and 2010–2019 and compare them with the values in Table 1 of Hein and Martschin (2021).^[Hein E. and Martschin, J. (2021), Demand and growth regimes in finance-dominated capitalism and the role of the macroeconomic policy regime: a post-Keynesian comparative study on France, Germany, Italy and Spain before and after the Great Financial Crisis and the Great Recession, 2, pp. 493–527. The paper can be found       
 [here](https://link.springer.com/article/10.1007/s43253-021-00044-5).]
 
 - Average real GDP growth
-- Average growth contribution of (private) consumption
+- Average growth contribution of private consumption
 - Average growth contribution of government consumption
 - Average growth contribution of gross fixed capital formation
+- Average growth contribution of exports
+- Average growth contribution of imports
 - Average growth contribution of net exports
 - Average net exports of goods and services as a share of GDP
 
-Report your results in a single R markdown document printed as HTML or PDF file. **Tip:** Use the _dplyr_ package for data analysis and the _kableExtra_ package to create a well formatted table.
+Report your results in a single R markdown document printed as HTML or PDF file. **Tip:** Use the _dplyr_ and _tidyr_ packages for data analysis and the _kableExtra_ package to create a well formatted table.
+
