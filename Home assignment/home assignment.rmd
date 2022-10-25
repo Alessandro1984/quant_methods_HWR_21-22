@@ -1,0 +1,281 @@
+---
+title: "Home assignment"
+subtitle: "For the course Quantitative Methods for Economists - HWR Berlin, Winter term 2021-2022"
+author: Alessandro Bramucci^[Institute for International Political Economy (IPE), Berlin School of Economics and Law. alessandro.bramucci@hwr-berlin.de]
+output:
+  bookdown::pdf_document2:
+    toc: true
+    number_sections: false
+    toc_depth: 4
+    fig_caption: yes
+bibliography: bibliography.bib
+---
+  
+```{r setup, include=TRUE, message=FALSE, warning=FALSE}
+# List of R packages to be used in the exercise
+library(rdbnomics)
+library(stargazer)
+library(kableExtra)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+The final assignment of our course consists of four tasks plus an introductory task to prepare the data. In this exercise, we are going to study the evolution of the wage share and estimate a consumption function, where consumption ($C$) is a function of wages ($W$) and profits ($R$), both expressed in real terms.^[This resembles a standard Keynesian consumption function but this time income is split into wage income and profit income.] After estimating by means of a linear regression the respective coefficients (elasticities), we will calculate the marginal propensities to consume from wages and profits and the effect of a redistribution from profits to wages on consumption. We will work with data for four countries, France, Germany, Italy, and Spain over the period 1991-2019. 
+
+We will use the methodology proposed, among others, in @StockhammerOnaran and @OnaranObst. These studies are part of a rich empirical literature in the heterodox research field that have investigated the relationship between functional income distribution and aggregate demand following the theoretical model proposed in the seminal paper by @BhaduriMarglin1990.
+
+Above is a list of R packages that are necessary to solve the exercises and prepare the final output. Report your results in a single final document prepared with *rmarkdown*, as done in previous exercises. It is **strongly** recommend to submit a *pdf* file. To pass the exercise, your document must be compiled without errors. Submit the final formatted document and the r file (*.rmd*) in the relevant NextCloud folder that will be available in Moodle. The assignment is due on **Wednesday 26 January at 12 noon**. 
+
+Start the exercise by repeating the codes of task zero. In this way, you will already have the data ready for the rest of the exercise. Make sure you have uploaded the packages listed at the top of the page. Follow the remaining instructions and have fun in solving the exercise and learning R!
+
+# Task 0 - Download and prepare the data
+
+a) Download the data using the *rdbnomics* package. To accomplish the exercise, we will need the following data:
+* Private final consumption expenditure at 2015 prices [OCPH]
+* Adjusted wage share: total economy: as percentage of GDP at current factor cost [ALCD2]
+* Gross domestic product at 2015 reference levels [OVGD]
+
+After having obtained the data, select the variables of interest, rename the variables, and filter the years that are needed for the exercise. To perform these operations use the *dplyr* package.
+
+```{r, eval = FALSE}
+countries <- c("deu", "esp", "fra", "ita")
+
+# Private final consumption expenditure at 2015 prices
+df_cons <- rdb("AMECO", "OCPH", dimensions = list(geo = countries)) %>%
+  select(Country, original_period, value) %>% 
+  rename(Year = original_period,
+         cons = value) %>% 
+  filter(Year >= 1991 & Year <= 2019)
+  
+# Adjusted wage share: total economy: as percentage of GDP at current factor cost 
+# (Compensation per employee as percentage of GDP at factor cost per person employed.)
+df_ws <- rdb("AMECO", "ALCD2", dimensions = list(geo = countries)) %>%
+  select(Country, original_period, value) %>% 
+  rename(Year = original_period,
+         ws = value) %>% 
+  filter(Year >= 1991 & Year <= 2019)
+
+# Gross domestic product at 2015 reference levels [OVGD]
+df_rgdp <- rdb("AMECO", "OVGD", dimensions = list(geo = countries)) %>%
+  select(Country, original_period, value) %>% 
+  rename(Year = original_period,
+         rgdp = value) %>% 
+  filter(Year >= 1991 & Year <= 2019)
+```
+
+b) Merge the dataframes with the appropriate function and create the variables needed for the rest of the exercise.
+ 
+```{r, eval = FALSE}
+df_final <- df_cons %>% 
+  left_join(df_ws, by = c("Country", "Year")) %>% 
+  left_join(df_rgdp, by = c("Country", "Year")) %>% 
+  group_by(Country) %>% 
+  mutate(comp = ws/100 * rgdp,
+         profits = (1 - ws/100) * rgdp,
+         ldcons = c(NA, diff(log(cons))),
+         ldcomp = c(NA, diff(log(comp))),
+         ldprofits = c(NA, diff(log(profits))))
+```
+
+# Task 1 - Plot the wage share
+
+Using the *ggplot2* package, plot the data for the adjusted wage share for the four countries of the exercise from 1991 to 2019. Include title, axis labels and a legend to your plot. The end result should look similar to the figure \@ref(fig:graph). 
+
+```{r graph, echo = FALSE, warning = FALSE, message = FALSE, out.width = "70%", fig.align = "center", fig.cap = "Adjusted wage share for France, Germany, Italy and Spain, 1991-2019. Source: AMECO."}
+countries <- c("deu", "esp", "fra", "ita")
+
+# Private final consumption expenditure at 2015 prices [OCPH]
+df_cons <- rdb("AMECO", "OCPH", dimensions = list(geo = countries)) %>%
+  select(Country, original_period, value) %>% 
+  rename(Year = original_period,
+         cons = value) %>% 
+  filter(Year >= 1991 & Year <= 2019)
+  
+# Adjusted wage share: total economy: as percentage of GDP at current factor cost 
+# (Compensation per employee as percentage of GDP at factor cost per person employed.) [ALCD2]
+df_ws <- rdb("AMECO", "ALCD2", dimensions = list(geo = countries)) %>%
+  select(Country, original_period, value) %>% 
+  rename(Year = original_period,
+         ws = value) %>% 
+  filter(Year >= 1991 & Year <= 2019)
+
+# Gross domestic product at 2015 reference levels [OVGD]
+df_rgdp <- rdb("AMECO", "OVGD", dimensions = list(geo = countries)) %>% # GDP used by Thomas -> UYGD
+  select(Country, original_period, value) %>% 
+  rename(Year = original_period,
+         rgdp = value) %>% 
+  filter(Year >= 1991 & Year <= 2019)
+
+# Join the data and create new variables
+df_final <- df_cons %>% 
+  left_join(df_ws, by = c("Country", "Year")) %>% 
+  left_join(df_rgdp, by = c("Country", "Year")) %>% 
+  group_by(Country) %>% 
+  mutate(comp = ws/100 * rgdp,
+         profits = (1 - ws/100) * rgdp,
+         ldcons = c(NA, diff(log(cons))),
+         ldcomp = c(NA, diff(log(comp))),
+         ldprofits = c(NA, diff(log(profits))))
+
+# Graph of adj. wage share in ggplot2
+p <- ggplot(df_final, aes(x = as.numeric(Year), y = ws)) +
+  geom_line(aes(color = Country)) +
+  # We include title and axis labels
+  labs(title = "Adjusted wage share, 1991-2019.", 
+       x = "Year", 
+       y = "Percent") +
+  scale_x_continuous(breaks = seq(1991, 2019, 1)) + 
+  # This option rotate the labels of the x-axis
+  theme(axis.text.x = element_text(angle = 45))
+p
+```
+
+# Task 2 - Calculate the average of the wage share for the periods 1991-2009 and 2010-2019
+
+Calculates the average value of the adjusted wage share for the four countries over the periods 1991-2009 and 2010-2019. Report your results in a table similar to table \@ref(tab:averages) below. To prepare the table, use the package *kableExtra*. What can we observe from table \@ref(tab:averages)?^[It should be noted that in most advanced countries the wage share was on a falling trend since the early 1980s. For an overview of the development of the wage share in some selected advanced economies since the 1960s, see the analysis proposed in the introductory chapter in @Hein2014.]
+
+```{r averages, echo = FALSE}
+# Compute averages of wage share
+df_table <- df_final %>%
+  mutate(Period = ifelse(Year >= 1991 & Year <= 2009, "1991-2009", "2010-2019")) %>% 
+  group_by(Country, Period) %>% 
+  summarise(Mean = mean(ws), .groups = 'drop') %>% 
+  ungroup() %>% 
+  pivot_wider(names_from = Country, values_from = Mean)
+
+# Create the table using kableExtra
+kbl(df_table,
+    digits = 3,
+    caption = "Average annual values of the adjusted wage share for the periods 1991-2009 and 2010-2019. Source: AMECO.",    
+    booktabs = T,
+    align = c("l", "c", "c")) %>%
+  kable_styling(latex_options = c("hold_position"),
+                position = "center")
+```
+
+# Task 3 - Estimate the consumption function
+
+We now estimate consumption elasticities for wage income and profit income. We will estimate the consumption function separately for the four countries using data from 1991 to 2019. In accordance with the literature, we will estimate the consumption function using logarithmic differences.^[Because we will use logarithmic differences, one observation will be lost. It can be seen that there are 28 observations in the table while the sample consists of 29 years.] Therefore, the coefficients of the regression model \@ref(eq:equation1) are to be interpreted as elasticities and not marginal effects. Your table should look like table \@ref(tab:regressions) where each column in the table corresponds to the regression for each country. Report number of observations in the sample ($N$) along with the $R^2$ for each regression. For the dependent and independent variables that will appear in the table, use the names that appear in table \@ref(tab:regressions). Use the package *stargazer* to reproduce the table.
+
+\begin{equation}
+dln(C) = \beta_0  + \beta_1 dln(W) + \beta_2 dln(R) + u
+(\#eq:equation1)
+\end{equation}
+
+```{r regressions, echo = FALSE, results = 'asis', message = FALSE, warning = FALSE}
+regression_list <- list()
+
+for (i in c("France", "Germany", "Italy", "Spain")) {
+  regression_list[[i]] <- lm(ldcons[Country == i] ~ ldcomp[Country == i] + 
+                             ldprofits[Country == i], data = df_final)
+}
+
+reg1 <- regression_list[[1]]
+reg2 <- regression_list[[2]]
+reg3 <- regression_list[[3]]
+reg4 <- regression_list[[4]]
+  
+
+# Regression table
+stargazer(reg1,
+          reg2,
+          reg3,
+          reg4,
+          header = FALSE,
+          type = "latex",
+          label = "tab:regressions",
+          title = "Estimation of the consumption function, 1991-2019.",
+          dep.var.labels = c("dln(C)"),
+          column.labels = c("France", "Germany", "Italy", "Spain"),
+          covariate.labels = c("dln(W)", "dln(R)"),
+          keep.stat = c("n", "rsq"))
+
+```
+
+# Task 4 - Compute the marginal effects
+
+The last exercise is to convert the elasticities estimated in the previous task into marginal effects. Remember that the elasticity, for example of the elasticity of consumption with respect to wages ($e_W$), is defined as:
+
+\begin{equation}
+\frac{\partial C / C}{\partial W / W} = e_W
+(\#eq:equation2)
+\end{equation}
+
+Rearranging, we obtain the expression that we need to convert the elasticity ($e_W$) into the marginal effect ($\partial C / \partial W$):
+
+\begin{equation}
+\frac{\partial C}{\partial W} = e_W * \frac{C}{W}
+(\#eq:equation3)
+\end{equation}
+
+The $C/W$ term on the right-hand side of the equation, is different for each year. When calculating the marginal effect, consider the average over the entire period, 1991-2019. Finally, using \@ref(eq:equation4) we want to calculate the effect of a 1 percentage point redistribution from profits to wages on consumption, where $\omega$ stands for the wage share.^[For the derivation of \@ref(eq:equation4), please refer to @Woodgate.] Your table should look similar to table \@ref(tab:marginal) below. Also here you should use the package *kableExtra* to replicate the table.
+
+\begin{equation}
+\frac{\partial C / Y}{\partial \omega} = \frac{\partial C}{\partial W} - \frac{\partial C}{\partial R}
+(\#eq:equation4)
+\end{equation}
+
+```{r marginal, echo = FALSE, results = 'asis', message = FALSE, warning = FALSE}
+# Sample averages for C/W and C/R
+df_avgs <- df_final %>% 
+  mutate(C_W = cons / comp,
+         C_R = cons / profits) %>% 
+  summarise(mean_C_W = mean(C_W),
+            mean_C_R = mean(C_R))
+
+# Collecting the elasticities
+df_elasticities <- tibble(
+  Country = c("France", "Germany", "Italy", "Spain"),
+  eW = numeric(4),
+  eP = numeric(4)
+)
+
+# Extracting elasticities France
+df_elasticities$eW[1] <- regression_list[["France"]]$coefficients[2]
+df_elasticities$eP[1] <- regression_list[["France"]]$coefficients[3]
+
+# Extracting elasticities Germany
+df_elasticities$eW[2] <- regression_list[["Germany"]]$coefficients[2]
+df_elasticities$eP[2] <- regression_list[["Germany"]]$coefficients[3]
+
+# Extracting elasticities Italy
+df_elasticities$eW[3] <- regression_list[["Italy"]]$coefficients[2]
+df_elasticities$eP[3] <- regression_list[["Italy"]]$coefficients[3]
+
+# Extracting elasticities Spain
+df_elasticities$eW[4] <- regression_list[["Spain"]]$coefficients[2]
+df_elasticities$eP[4] <- regression_list[["Spain"]]$coefficients[3]
+
+# Merging the two datasets
+df_avgs_ela <- df_avgs %>% 
+  full_join(df_elasticities, by = "Country") %>% 
+  mutate(marg_C = eW * mean_C_W,
+         marg_R = eP * mean_C_R,
+         redistribution = marg_C - marg_R)
+
+# Table
+kbl(df_avgs_ela,
+    digits = 3,
+    caption = "Values used to convert from elasticity to marginal effects, elasticities and marginal effects of wage and profit income and the combined effect for an increase in the wage share on C/Y, 1991-2019.",    
+    booktabs = T,
+    col.names = c("Country",
+                  "$C / W$",
+                  "$C / R$",
+                  "$e_W$",
+                  "$e_R$",
+                  "$\\partial C / \\partial W$",
+                  "$\\partial C / \\partial R$",
+                  "$\\partial C / Y / \\partial \\omega$"),
+    escape = FALSE, 
+    align = c("l", "c", "c", "c", "c", "c", "c", "c")) %>%
+  kable_styling(latex_options = c("hold_position"),
+                position = "center")
+
+```
+
+What is the effect of an increase of a 1 percentage point of GDP in the wage share on consumption? An redistribution of 1 percentage point of GDP to wages at the expense of profits would stimulate consumption by 0.073 percentage points in France, 0.361 percentage points in Germany, 0.359 percentage points in Italy and 0.232 percentage points in Spain.
+
+\pagebreak
+
+# References
