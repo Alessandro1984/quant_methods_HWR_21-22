@@ -67,6 +67,10 @@ R2
 R2 <- 1 - SSR/SST
 R2
 
+# Adjusted R2
+R2_adj <- 1 - (SSR/(length(y)-1-1)) / (SST/(length(y)-1))
+R2_adj
+
 # We can also calculate the root mean squared error (RMSE)
 RMSE <- sqrt(SSR/(length(y)-2)) # Degrees of freedom correction = 2
 RMSE
@@ -77,5 +81,4 @@ summary(model1)
 
 library(stargazer)
 
-stargazer(model1, type = "text", keep.stat = c("n", "rsq", "ser"))
-
+stargazer(model1, type = "text", keep.stat = c("n", "rsq", "ser", "adj.rsq"))
